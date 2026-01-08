@@ -1,3 +1,6 @@
+export const runtime = "nodejs"; // 🔥 REQUIRED
+
+
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import cloudinary from "@/lib/cloudinary";
