@@ -2,11 +2,17 @@
 
 import { useSearchParams } from "next/navigation";
 
-export default function DownloadPage() {
+export default function DownloadClient() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
 
-  if (!orderId) return <p>Missing order reference.</p>;
+  if (!orderId) {
+    return (
+      <p className="text-center mt-10">
+        Missing order reference.
+      </p>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto mt-10">
