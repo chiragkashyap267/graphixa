@@ -1,65 +1,222 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { Product } from "@/types/product";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import CategoryHeader from "@/components/ui/CategoryHeader";
+import { useAuth } from "@/components/AuthContext";
+import gsap from "gsap";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { useCart } from "@/components/CartContext";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert, { AlertColor } from "@mui/material/Alert";
+import HomeHeroSlider from "@/components/HomeHeroSlider";
+import SpotlightCard from "@/components/ui/SpotlightCard";
+
+/* CATEGORY DISPLAY META */
+const CATEGORY_META: Record<string, { title: string; subtitle: string }> = {
+  "indian-textures": {
+    title: "Indian Textures",
+    subtitle: "Authentic Indian grains, papers & surface textures",
+  },
+  "indian-packaging": {
+    title: "Indian Packaging Designs",
+    subtitle: "Packaging layouts inspired by Indian brands",
+  },
+  "indian-icons": {
+    title: "Indian Icons & Symbols",
+    subtitle: "Cultural symbols & vector icon packs",
+  },
+  "indian-overlays": {
+    title: "Indian Overlays",
+    subtitle: "Festive dust, light & cultural overlays",
+  },
+};
+
+export default function HomePage() {
+  const { addToCart } = useCart();
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<AlertColor>("success");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const user = useAuth();
+
+  /* FETCH PRODUCTS */
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const snap = await getDocs(collection(db, "products"));
+      const list: Product[] = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Product, "id">),
+      }));
+      setProducts(list);
+      setLoading(false);
+    };
+    fetchProducts();
+  }, []);
+
+  /* GSAP ENTRY */
+  useEffect(() => {
+    if (products.length === 0) return;
+
+    gsap.fromTo(
+      ".product-card",
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: "power3.out",
+        clearProps: "opacity,transform",
+      }
+    );
+  }, [products.length]);
+
+  /* GROUP PRODUCTS BY CATEGORY */
+  const groupedProducts = products.reduce<Record<string, Product[]>>(
+    (acc, product) => {
+      if (!product.category) return acc;
+      if (!acc[product.category]) acc[product.category] = [];
+      acc[product.category].push(product);
+      return acc;
+    },
+    {}
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">
+        Loading products…
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="bg-[#020617] text-white">
+      <HomeHeroSlider />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
+        {Object.entries(CATEGORY_META).map(([categoryId, meta]) => {
+          const items = groupedProducts[categoryId];
+          if (!items || items.length === 0) return null;
+
+          return (
+            <section key={categoryId} className="mb-20 sm:mb-32">
+              <div className="mb-6 sm:mb-10">
+                <CategoryHeader title={meta.title} subtitle={meta.subtitle} />
+              </div>
+
+              <SpotlightCard>
+                {/* GRID */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+                  {items.map((product) => (
+                    <div
+                      key={product.id}
+                      className="
+                        product-card
+                        rounded-2xl
+                        bg-gradient-to-br from-white/10 via-white/5 to-transparent
+                        backdrop-blur-xl
+                        border border-white/10
+                        transition
+                        hover:border-teal-400/60
+                      "
+                    >
+                      {/* IMAGE */}
+                      <div className="relative aspect-square lg:aspect-[4/5] overflow-hidden rounded-t-2xl">
+                        <Image
+                          src={product.previewUrl}
+                          alt={product.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+
+                      {/* CONTENT */}
+                      <div className="p-3 lg:p-4">
+                        <h3 className="text-sm lg:text-base font-semibold mb-1 line-clamp-1">
+                          {product.title}
+                        </h3>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm lg:text-lg font-bold text-teal-300">
+                            ₹{product.price}
+                          </span>
+
+                          <div className="flex gap-1 lg:gap-2">
+                            <button
+                              onClick={() =>
+                                router.push(`/products/${product.id}`)
+                              }
+                              className="px-2 py-1
+  lg:px-4 lg:py-2
+  rounded-md lg:rounded-lg
+  border border-teal-400/40
+  text-teal-300
+  text-xs lg:text-base"
+                            >
+                              View
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (!user) {
+                                  router.push("/login");
+                                  return;
+                                }
+                                addToCart(product);
+                                setToastMessage("Added to cart");
+                                setToastType("success");
+                                setToastOpen(true);
+                              }}
+                              className="px-2 py-1
+  lg:px-4 lg:py-2
+  rounded-md lg:rounded-lg
+  bg-teal-400
+  text-black
+  text-xs lg:text-base
+  font-semibold"
+                            >
+                              <ShoppingCartIcon fontSize="inherit" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SpotlightCard>
+            </section>
+          );
+        })}
+      </div>
+
+      {/* TOAST */}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={2500}
+        onClose={() => setToastOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <MuiAlert
+          severity={toastType}
+          sx={{
+            backgroundColor: "#020617",
+            color: "#2dd4bf",
+            border: "1px solid rgba(45,212,191,0.4)",
+          }}
+          elevation={6}
+          variant="filled"
+        >
+          {toastMessage}
+        </MuiAlert>
+      </Snackbar>
     </div>
   );
 }
